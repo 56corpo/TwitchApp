@@ -1,0 +1,9 @@
+/target
+/release
+/dist
+/node_modules
+*.pdb
+*.log
+.DS_Store
+Thumbs.db
+.env
