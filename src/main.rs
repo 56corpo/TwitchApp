@@ -14,7 +14,7 @@ use tao::{
     event_loop::{ControlFlow, EventLoopBuilder},
     window::{Icon, WindowBuilder},
 };
-use wry::{http::Request, NewWindowResponse, WebViewBuilder};
+use wry::{http::Request, WebViewBuilder};
 
 const EMBEDDED_ICON_PNG: &[u8] = include_bytes!("../assets/icon.png");
 
@@ -75,10 +75,10 @@ fn main() -> wry::Result<()> {
         })
         .with_new_window_req_handler(|url: String| {
             if is_allowed_twitch_domain(&url) {
-                NewWindowResponse::Allow
+                true
             } else {
                 let _ = open::that(&url);
-                NewWindowResponse::Deny
+                false
             }
         })
         .with_ipc_handler(move |req: Request<String>| {
