@@ -2,6 +2,8 @@ name: Build Rust App and Create Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -14,22 +16,36 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Rust toolchain (stable)
+        shell: pwsh
+        run: |
+          rustup default stable
+          rustc --version
+          cargo --version
 
-      - name: Cache Cargo registry and target
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build release binary
+      - name: Build Rust release binary (.exe)
+        shell: pwsh
         run: cargo build --release
 
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            target/release/twitch-app.exe
+      - name: Publish or Update GitHub Release
+        shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" } else { "v2.0.0" }
+          $exePath = "target/release/twitch-app.exe"
+
+          if (-not (Test-Path $exePath)) {
+            Write-Error "Le binaire $exePath est introuvable."
+            exit 1
+          }
+
+          # Vérifier si la release existe déjà, sinon la créer, puis téléverser le .exe
+          gh release view $tag > $null 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $exePath --clobber
+          } else {
+            gh release create $tag $exePath --title "TwitchApp Rust $tag" --generate-notes
+          }
